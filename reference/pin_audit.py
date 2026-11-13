@@ -16,7 +16,7 @@ try:
     import lightgbm as lgb
     GB_NAME = f"lightgbm {lgb.__version__} LGBMClassifier defaults (n_jobs=8, verbose=-1)"
     def GB(seed): return lgb.LGBMClassifier(random_state=seed, n_jobs=8, verbose=-1)
-except ImportError:
+except (ImportError, OSError):  # OSError: lightgbm installed but its OpenMP runtime is missing
     from sklearn.ensemble import HistGradientBoostingClassifier
     GB_NAME = "sklearn HistGradientBoostingClassifier defaults"
     def GB(seed): return HistGradientBoostingClassifier(random_state=seed)
@@ -40,7 +40,7 @@ ap.add_argument("--entrap-type", default="shuffled target sequences (K/R-fixed s
 a = ap.parse_args()
 os.makedirs(a.work, exist_ok=True); os.makedirs(a.out, exist_ok=True)
 T0 = time.time(); SEED = a.seed; NOM = 0.01
-LOG = open(os.path.join(a.out, f"{a.name}.s{SEED}.log"), "w")
+LOG = open(os.path.join(a.out, f"{a.name}.s{SEED}.log"), "w", encoding="utf-8")
 def log(*x):
     s = " ".join(str(v) for v in x); print(s, flush=True); LOG.write(s + "\n"); LOG.flush()
 warnings.filterwarnings("ignore")
@@ -116,7 +116,7 @@ con.execute(f"""CREATE OR REPLACE TABLE pepl AS
   FROM s QUALIFY row_number() OVER (PARTITION BY modpep ORDER BY "{score}" DESC, isd DESC) = 1""")
 R["spectra"] = con.execute("SELECT count(*) FROM (SELECT DISTINCT ScanNr, ExpMass FROM cl WHERE cls NOT IN ('B','X'))").fetchone()[0]
 if a.drop_peptides:
-    dl = [l.strip().split(",")[0].split("\t")[0] for l in open(a.drop_peptides) if l.strip()]
+    dl = [l.strip().split(",")[0].split("\t")[0] for l in open(a.drop_peptides, encoding="utf-8") if l.strip()]
     dl = sorted({re.sub(r"[^A-Z]", "", x.upper()).replace("I", "L") for x in dl} - {""})
     con.execute("CREATE OR REPLACE TABLE dropl AS SELECT unnest(?) AS bare", [dl])
     R["drop_list"] = {"file": a.drop_peptides, "unique_bare": len(dl),
@@ -128,7 +128,7 @@ PT["phase0"] = time.time() - t
 log("phase0", R["rows_by_class"], R["peptides_by_class"], round(PT["phase0"], 1), "s")
 NE_ALL = R["peptides_by_class"].get("E", 0)
 if NE_ALL < 2000:
-    R["stopped"] = f"entrapment peptides {NE_ALL} < 2000"; json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w"), indent=1, default=str)
+    R["stopped"] = f"entrapment peptides {NE_ALL} < 2000"; json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w", encoding="utf-8"), indent=1, default=str)
     log("STOP", R["stopped"]); sys.exit(0)
 
 # ---------------- PHASE 1 (DuckDB q-values) ----------------
@@ -157,7 +157,7 @@ _ntc = con.execute(f"SELECT count(*) FILTER (cls='T') FROM pq WHERE q_base <= {_
 R["certificate"] = {"rho_point": _rho, "rho_ucb95": _rho_u, "epsilon_nats": _eps, "certified_q": _qc, "n_targets_certified": int(_ntc)}
 log("certificate", R["certificate"])
 if a.phase1_only:
-    json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w"), indent=1, default=str); log("phase1-only done"); sys.exit(0)
+    json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w", encoding="utf-8"), indent=1, default=str); log("phase1-only done"); sys.exit(0)
 # export peptide table to numpy (float32 features) via arrow
 skip = {"SpecId", "Label", "ScanNr", "ExpMass", "Peptide", names[-1], "cls", "modpep", "bare", "isd", score, "pl", "nd", "mism", "q0", "q_base", "fold"}
 feats0 = [c for c in names[:-1] if c not in skip]
@@ -451,7 +451,7 @@ if prio:
         PL.append(f"| {f} | {fmt(g('A','LR'))} / {fmt(g('A','GB'))} | {fmt(g('B','LR'))} / {fmt(g('B','GB'))} | {fmt(g('C','LR'))} / {fmt(g('C','GB'))} | "
                   f"{100*(g('B','LR')['comb']-g('A','LR')['comb']):+.2f} / {100*(g('B','GB')['comb']-g('A','GB')['comb']):+.2f} | {d7('LR')} / {d7('GB')} | "
                   f"{P5[f]['KS3']:.4f} ({P5[f]['p3']:.1e}) | {P6[f]['rho']:.3f}, {P6[f]['flag']} |")
-    open(os.path.join(a.out, f"{a.name}.s{SEED}.priority.md"), "w").write("\n".join(PL) + "\n")
+    open(os.path.join(a.out, f"{a.name}.s{SEED}.priority.md"), "w", encoding="utf-8").write("\n".join(PL) + "\n")
     log("priority done", round(time.time() - tp), "s"); [log(l) for l in PL]
     if a.tune: sys.exit(0)
 p4_for([f for f in cand if f not in prio])
@@ -481,7 +481,7 @@ for f in cand:
     if v == "REJECTED": v += " (causal-" + (", third-null-)" if not P5[f]["agree"] else ")")
     verdict[f] = v
 R["verdicts"] = verdict
-json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w"), indent=1, default=str)
+json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w", encoding="utf-8"), indent=1, default=str)
 
 L = []; w = L.append
 p = lambda x, d=3: "nan" if x is None or (isinstance(x, float) and not np.isfinite(x)) else (f"{x:.{d}f}" if isinstance(x, float) else str(x))
@@ -561,6 +561,6 @@ C.append(f"Learner: condition A gives combined FDP {100*AL['comb']:.2f}% [{100*A
          + (", so the boosted learner runs hotter on the same features." if AG['comb'] > AL['comb_ci'][1] else ", so the two learners agree within intervals."))
 w("\n## CHARACTERIZATION\n" + " ".join(C))
 R["characterization"] = " ".join(C); R["newton_iterations_max"] = max(NEWTON_ITERS) if NEWTON_ITERS else None
-json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w"), indent=1, default=str)
-open(os.path.join(a.out, f"{a.name}.s{SEED}.md"), "w").write("\n".join(L) + "\n")
+json.dump(R, open(os.path.join(a.out, f"{a.name}.s{SEED}.json"), "w", encoding="utf-8"), indent=1, default=str)
+open(os.path.join(a.out, f"{a.name}.s{SEED}.md"), "w", encoding="utf-8").write("\n".join(L) + "\n")
 log("done", round(R["total_seconds"] / 60, 1), "min", verdict)

@@ -1,8 +1,12 @@
-# Container for the auditor. The reference implementation ran with these on Python 3.11.
-duckdb==1.2.2
+# Environment for the agent and for reference/pin_audit.py. The reference ran on Python 3.11 with the exact pins below.
+# Pins are relaxed only where that exact version has no wheel (Apple Silicon for lightgbm 3.3.5, Python 3.14 for duckdb 1.2.2).
+duckdb==1.2.2; python_version < "3.14"
+duckdb>=1.4; python_version >= "3.14"
 polars>=1.0
+pandas>=2.0
 numpy>=1.26
 scipy>=1.11
 scikit-learn==1.7.2
-lightgbm==3.3.5
+lightgbm==3.3.5; sys_platform != "darwin" or platform_machine != "arm64"
+lightgbm>=4.0; sys_platform == "darwin" and platform_machine == "arm64"
 pyarrow>=15

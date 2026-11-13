@@ -1,7 +1,7 @@
 # Data
 
-The data ships as release assets on this repository's `v1.0` release. `download.sh` fetches it and verifies it
-against `SHA256SUMS`.
+The data ships as release assets on this repository's `v1.0` release. `python data/download.py` fetches it into
+`data/assets/` and verifies every file against `SHA256SUMS`, on any operating system.
 
 | Asset | What | Size |
 |---|---|---|

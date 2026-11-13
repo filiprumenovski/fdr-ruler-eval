@@ -19,8 +19,8 @@ R_ATH = 0.666
 
 
 def reference(inst, rung="B"):
-    key = json.loads((HERE / inst / "key" / "grading_key.json").read_text())
-    lists = g.final_lists((HERE / inst / "reference_report.md").read_text())
+    key = json.loads((HERE / inst / "key" / "grading_key.json").read_text(encoding="utf-8"))
+    lists = g.final_lists((HERE / inst / "reference_report.md").read_text(encoding="utf-8"))
     ans = {"ruler": key["ruler"], "ruler_justification": "reference", "calibrated": bool(key["calibrated"]),
            "baseline_combined_fdp_1pct": key["numbers"]["phase1_comb_fdp_1pct"],
            "n_targets_1pct": key["numbers"]["phase1_n_targets_1pct"],
@@ -88,7 +88,7 @@ def main():
         f = ROOT / "latch" / f"pin_leak_audit_{inst}_{rung}.json"
         if not f.exists():
             continue
-        ev = json.loads(f.read_text())
+        ev = json.loads(f.read_text(encoding="utf-8"))
         grader = get_grader(ev["grader"]["type"])
         for label, ans, expect in cases(inst, rung):
             r = grader.evaluate_answer(ans, ev["grader"]["config"])
@@ -100,7 +100,7 @@ def main():
     table = ("# Failure table (Latch grader, latch-eval-tools)\n\n"
              "Every row is graded by Latch's own `average_of` grader from `latch/pin_leak_audit_<I>.json`.\n\n"
              "| instance | answer | expected | got | score | |\n|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n")
-    (ROOT / "evidence" / "FAILURE_TABLE.md").write_text(table)
+    (ROOT / "evidence" / "FAILURE_TABLE.md").write_text(table, encoding="utf-8")
     sys.exit(0 if ok else 1)
 
 
