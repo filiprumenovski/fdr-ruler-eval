@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <b>8 models &nbsp;·&nbsp; 11 runs &nbsp;·&nbsp; 0 passes</b>
+  <b>8 models &nbsp;·&nbsp; 0 passes</b>
 </p>
 
 <p align="center">
