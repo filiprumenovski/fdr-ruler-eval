@@ -1,0 +1,8 @@
+# Container for the auditor. The reference implementation ran with these on Python 3.11.
+duckdb==1.2.2
+polars>=1.0
+numpy>=1.26
+scipy>=1.11
+scikit-learn==1.7.2
+lightgbm==3.3.5
+pyarrow>=15

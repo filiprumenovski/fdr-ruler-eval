@@ -1,0 +1,6 @@
+data/assets/
+instances/*/eval.parquet
+instances/*/fasta/
+__pycache__/
+*.pyc
+.DS_Store
